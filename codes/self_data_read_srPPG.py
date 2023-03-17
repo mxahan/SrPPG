@@ -412,7 +412,7 @@ loss_v = []
 def wt_save(neural_net, save_mdl = '../../../../Dataset/Merl_Tim/NNsave/SavedWM/Models/ssl_model_2'):
     neural_net.save_weights(save_mdl)
 
-def trainNetProb(net):
+def trainNetProb(net): # complete network training
     samp_load =  data_loader(video=data_align, ppg = ppgnp_align, bs = 1)
     for step in range(100000):
         if random.random() <0.9:
@@ -437,8 +437,22 @@ def trainNetProb(net):
         if step % (9999) == 0:
             wt_save(net, save_mdl = '../../../../Dataset/Merl_Tim/NNsave/SavedWM/Models/ssl_mods_2')
 
+def trainNet_cont(net):  # Encoder training
+    samp_load =  data_loader(video=data_align, ppg = ppgnp_align, bs = 1)
+    for step in range(30000):
+        x = samp_load.get_CL_data(pve = 1, nve = 8)
+        with tf.GradientTape() as g:
+            pred =  net.layers[0](x, training = True) 
+            loss =  loss_crit(pred[0:1],pred[1:])  
+        trainable_variables =  net.layers[0].trainable_variables
+        gradients =  g.gradient(loss, trainable_variables)  
+        optimizer1.apply_gradients(zip(gradients, trainable_variables))
+        
+        if step % (500) == 0:
+            loss_v.append(loss)
+            print("step %i, loss: %f" %(step, loss))
 
-def train_gen_model():
+def train_gen_model(): # complete gan training
     samp_load =  data_loader(video=data_align, ppg = ppgnp_align, bs = 1)
     for step in range(3000):
         
@@ -485,6 +499,9 @@ def train_gen_model():
 #            wt_save(net, save_mdl = '../../../Dataset/Merl_Tim/NNsave/SavedWM/Models/ssl_mods')            
             
 #%% Training main
+
+# with tf.device('gpu:0'): #very important
+#     trainNet_cont(neural_net)
 
 with tf.device('gpu:0'): #very important
     trainNetProb(neural_net)
